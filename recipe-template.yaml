@@ -1,0 +1,53 @@
+---
+RecipeFormatVersion: "2020-01-25"
+ComponentName: @@COMPONENT_NAME@@
+ComponentVersion: "@@COMPONENT_VERSION@@"
+ComponentDescription: >
+  S3 파일 스풀러 - 지정된 디렉토리의 파일을 Stream Manager를 통해 S3로 전송한다.
+ComponentPublisher: example.com
+
+ComponentDependencies:
+  aws.greengrass.StreamManager:
+    VersionRequirement: ">=2.1.0"
+    DependencyType: HARD
+
+ComponentConfiguration:
+  DefaultConfiguration:
+    # CAN Blackbox 패턴: 핵심 설정만 레시피에서 관리, 세부 설정은 INI 파일 사용
+    spool_dir: "/var/spool/s3-spooler/spool"
+    log_level: "INFO"
+    # 고급 설정은 spooler.ini에서 관리됩니다.
+
+Manifests:
+  - Platform:
+      os: linux
+    Lifecycle:
+      Install:
+        RequiresPrivilege: false
+        # PyPI 없이 아티팩트에 포함된 wheel에서 설치 (TGU 사이버보안 정책)
+        # deps/ 디렉토리는 build_artifact.py --bundle 빌드 시 생성됨
+        Script: |
+          pip3 install \
+            --quiet \
+            --no-index \
+            --find-links {artifacts:path}/deps/ \
+            watchdog \
+            stream-manager \
+            cbor2
+      Run:
+        Script: |
+          # CAN Blackbox 패턴: INI 설정 파일 우선 사용, 중요 설정은 레시피에서 오버라이드
+          PYTHONPATH={artifacts:path} python3 -m spooler \
+            --config {artifacts:path}/spooler.ini \
+            --spool-dir {configuration:/spool_dir} \
+            --log-level {configuration:/log_level}
+      Shutdown:
+        Script: "echo 'S3 Spooler shutting down'"
+    Artifacts:
+      - URI: "@@ARTIFACT_S3_URI@@"
+        Digest: "@@SHA256_DIGEST@@"
+        Algorithm: SHA-256
+        Unarchive: ZIP
+        Permission:
+          Read: ALL
+          Execute: NONE

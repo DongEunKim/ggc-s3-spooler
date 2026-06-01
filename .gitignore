@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 배포 설정 (실제 버킷/ARN 포함 — 버전관리 제외)
+deploy.yaml
+
+# Greengrass 빌드 산출물
+artifacts/
+*.zip

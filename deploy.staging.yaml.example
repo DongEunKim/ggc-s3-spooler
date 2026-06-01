@@ -1,0 +1,17 @@
+# GGC S3 Spooler 배포 설정 — 스테이징 환경
+# 복사 후 사용: cp deploy.staging.yaml.example deploy.staging.yaml
+
+component:
+  name: com.example.S3Spooler
+  s3_bucket: "REPLACE_WITH_STAGING_BUCKET"
+  s3_prefix: "artifacts"
+  region: "ap-northeast-2"
+
+deployment:
+  name: "S3Spooler-staging"
+  target_arn: "REPLACE_WITH_STAGING_THINGGROUP_ARN"
+  config_override:
+    spool_dir: "/var/spool/s3-spooler"
+    max_spool_size_mb: 400
+    file_retention_hours: 24
+    log_level: "DEBUG"   # 스테이징은 DEBUG 레벨

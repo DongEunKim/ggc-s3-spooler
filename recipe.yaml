@@ -1,0 +1,61 @@
+---
+RecipeFormatVersion: "2020-01-25"
+ComponentName: com.example.S3Spooler
+ComponentVersion: "1.0.0"
+ComponentDescription: >
+  S3 파일 스풀러 - 지정된 디렉토리의 파일을 Stream Manager를 통해 S3로 전송한다.
+ComponentPublisher: example.com
+
+ComponentDependencies:
+  aws.greengrass.StreamManager:
+    VersionRequirement: ">=2.1.0"
+    DependencyType: HARD
+
+ComponentConfiguration:
+  DefaultConfiguration:
+    # 🎯 AWS Labs 스타일 간소화: 4개 핵심 파라미터만
+    spool_dir: "/var/spool/s3-spooler/spool"
+    incomplete_file_delay: 1.0    # AWS Labs 패턴: 미완성 파일 보호 (초)
+    default_stream: "telemetry"   # 라우팅 실패 시 폴백 스트림 (미래 확장용)
+    log_level: "INFO"
+
+    # 🔧 고급 설정은 환경변수로 오버라이드:
+    # SPOOL_MAX_SIZE_MB=900, SPOOL_RETENTION_HOURS=24, SPOOL_POLL_INTERVAL=5
+    # STREAM_MANAGER_HOST=localhost, STREAM_MANAGER_PORT=8088
+
+Manifests:
+  - Platform:
+      os: linux
+    Lifecycle:
+      Install:
+        RequiresPrivilege: false
+        Script: |
+          pip3 install --quiet /artifacts/com.example.S3Spooler/1.0.0/ggc-s3-spooler.zip
+      Run:
+        Script: |
+          # CAN Blackbox 패턴: INI 설정 파일 우선 사용, 필요시 CLI 오버라이드
+          python3 -u -m spooler \
+            --config /artifacts/com.example.S3Spooler/1.0.0/spooler.ini \
+            --spool-dir {configuration:/spool_dir} \
+            --incomplete-file-delay {configuration:/incomplete_file_delay} \
+            --default-stream {configuration:/default_stream} \
+            --log-level {configuration:/log_level} \
+            --max-size-mb ${SPOOL_MAX_SIZE_MB:-900} \
+            --retention-hours ${SPOOL_RETENTION_HOURS:-24} \
+            --poll-interval ${SPOOL_POLL_INTERVAL:-5} \
+            --sm-host ${STREAM_MANAGER_HOST:-localhost} \
+            --sm-port ${STREAM_MANAGER_PORT:-8088}
+    Artifacts:
+      - URI: "s3://BUCKET_NAME/artifacts/com.example.S3Spooler/1.0.0/ggc-s3-spooler.zip"
+        Digest: "PLACEHOLDER"
+        Algorithm: SHA-256
+        Unarchive: ZIP
+        Permission:
+          Read: ALL
+          Execute: NONE
+      - URI: "s3://BUCKET_NAME/artifacts/com.example.S3Spooler/1.0.0/spooler.ini"
+        Digest: "PLACEHOLDER"
+        Algorithm: SHA-256
+        Permission:
+          Read: ALL
+          Execute: NONE

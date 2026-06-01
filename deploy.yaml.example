@@ -1,0 +1,31 @@
+# GGC S3 Spooler 배포 설정
+# 이 파일은 버전관리에서 제외된다 (.gitignore).
+# deploy.yaml.example을 복사하여 실제 값으로 채운다.
+
+component:
+  # Greengrass 컴포넌트 식별자 (ARN의 일부, 변경 시 기존 배포와 별개 컴포넌트로 인식됨)
+  name: com.example.S3Spooler
+
+  # 아티팩트를 저장할 S3 버킷 이름
+  s3_bucket: "REPLACE_WITH_YOUR_BUCKET"
+
+  # S3 키 접두사 (슬래시로 끝나지 않게)
+  s3_prefix: "artifacts"
+
+  # AWS 리전
+  region: "ap-northeast-2"
+
+deployment:
+  # 배포 이름 (AWS IoT 콘솔에서 식별자로 사용)
+  name: "S3Spooler-auto-deploy"
+
+  # 배포 대상 Thing 또는 ThingGroup ARN
+  # 예시: arn:aws:iot:ap-northeast-2:123456789012:thinggroup/MyDeviceGroup
+  target_arn: "REPLACE_WITH_YOUR_THING_OR_GROUP_ARN"
+
+  # 컴포넌트 설정 오버라이드 (선택사항 — 비워두면 recipe DefaultConfiguration 사용)
+  config_override:
+    spool_dir: "/var/spool/s3-spooler"
+    max_spool_size_mb: 512
+    file_retention_hours: 24
+    log_level: "INFO"

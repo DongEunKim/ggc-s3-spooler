@@ -1,0 +1,17 @@
+# GGC S3 Spooler 배포 설정 — 프로덕션 환경
+# 복사 후 사용: cp deploy.prod.yaml.example deploy.prod.yaml
+
+component:
+  name: com.example.S3Spooler
+  s3_bucket: "REPLACE_WITH_PROD_BUCKET"
+  s3_prefix: "artifacts"
+  region: "ap-northeast-2"
+
+deployment:
+  name: "S3Spooler-production"
+  target_arn: "REPLACE_WITH_PROD_THINGGROUP_ARN"
+  config_override:
+    spool_dir: "/var/spool/s3-spooler"
+    max_spool_size_mb: 400
+    file_retention_hours: 24
+    log_level: "INFO"

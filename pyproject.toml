@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ggc-s3-spooler"
+version = "1.0.0"
+description = "AWS Greengrass Component: S3 File Spooler via Stream Manager"
+requires-python = ">=3.11"
+dependencies = [
+    # TGU 번들 배포 대상 패키지 — PyPI 없이 wheel로 배포됨 (research/06 참고)
+    "watchdog>=4.0.0",
+    "stream-manager>=1.1.1",
+    # cbor2: stream-manager 의 직접 의존성 (명시적 고정)
+    "cbor2>=5.4.6,<6.0",  # 5.x = pure-Python 버전 사용 가능, 6.x는 C 확장만 제공
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.7",
+    "pytest-cov>=5.0.0",
+    "pytest-mock>=3.14.0",
+    "ruff>=0.4.9",
+    "mypy>=1.10.0",
+]
+deploy = [
+    "boto3>=1.34.0",
+    "pyyaml>=6.0.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/spooler"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.ruff]
+src = ["src"]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "ANN"]
+ignore = ["ANN101", "ANN102"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+packages = ["spooler"]
