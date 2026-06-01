@@ -32,7 +32,7 @@ pytest tests/unit/ -v
 클라이언트 프로세스는 아래 형식으로 파일명을 지정하여 스풀 디렉토리에 저장한다:
 
 ```
-{stream_id}__{s3_key_base64url}__{original_filename}
+{stream_id}__{s3_key_encoded}
 ```
 
 Python 유틸리티 사용 예:
@@ -40,7 +40,7 @@ Python 유틸리티 사용 예:
 from spooler.filename_codec import encode
 
 spool_name = encode("telemetry-stream", "data/device-1/reading.json")
-# → "telemetry-stream__ZGF0YSFkZXZpY2UtMSFyZWFkaW5nLmpzb24"
+# → "telemetry-stream__data!device-1!reading.json"
 ```
 
 ## INI 설정 사용법
