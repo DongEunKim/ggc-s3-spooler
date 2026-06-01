@@ -13,15 +13,34 @@ ComponentDependencies:
 
 ComponentConfiguration:
   DefaultConfiguration:
-    # 🎯 AWS Labs 스타일 간소화: 4개 핵심 파라미터만
+    # 🎯 핵심 설정
     spool_dir: "/var/spool/s3-spooler/spool"
-    incomplete_file_delay: 1.0    # AWS Labs 패턴: 미완성 파일 보호 (초)
-    default_stream: "telemetry"   # 라우팅 실패 시 폴백 스트림 (미래 확장용)
     log_level: "INFO"
 
-    # 🔧 고급 설정은 환경변수로 오버라이드:
-    # SPOOL_MAX_SIZE_MB=900, SPOOL_RETENTION_HOURS=24, SPOOL_POLL_INTERVAL=5
-    # STREAM_MANAGER_HOST=localhost, STREAM_MANAGER_PORT=8088
+    # 🔧 용량 관리
+    max_spool_size_mb: 900
+    file_retention_hours: 24
+    poll_interval_seconds: 5
+
+    # 🌐 Stream Manager 연결
+    stream_manager_host: "localhost"
+    stream_manager_port: 8088
+
+    # 📦 S3 Export 설정 (Pattern 2)
+    s3_bucket: ""
+    status_stream_name: ""
+
+    # ⚡ 성능 튜닝
+    incomplete_file_delay: 1.0
+    default_stream: "telemetry"   # 라우팅 실패 시 폴백 스트림
+
+    # 🔬 안정성 검증 (고급 설정)
+    file_stability_wait: 0.1
+    stability_check_interval: 0.2
+    stability_check_count: 3
+    max_stability_wait: 10.0
+    stability_max_retries: 3
+    stability_retry_delay: 1.0
 
 Manifests:
   - Platform:
@@ -33,18 +52,26 @@ Manifests:
           pip3 install --quiet /artifacts/com.example.S3Spooler/1.0.0/ggc-s3-spooler.zip
       Run:
         Script: |
-          # CAN Blackbox 패턴: INI 설정 파일 우선 사용, 필요시 CLI 오버라이드
+          # 레시피 중심 설정: 모든 주요 설정을 ComponentConfiguration에서 제어
           python3 -u -m spooler \
             --config /artifacts/com.example.S3Spooler/1.0.0/spooler.ini \
             --spool-dir {configuration:/spool_dir} \
+            --log-level {configuration:/log_level} \
+            --max-size-mb {configuration:/max_spool_size_mb} \
+            --retention-hours {configuration:/file_retention_hours} \
+            --poll-interval {configuration:/poll_interval_seconds} \
+            --sm-host {configuration:/stream_manager_host} \
+            --sm-port {configuration:/stream_manager_port} \
+            --s3-bucket {configuration:/s3_bucket} \
+            --status-stream-name {configuration:/status_stream_name} \
             --incomplete-file-delay {configuration:/incomplete_file_delay} \
             --default-stream {configuration:/default_stream} \
-            --log-level {configuration:/log_level} \
-            --max-size-mb ${SPOOL_MAX_SIZE_MB:-900} \
-            --retention-hours ${SPOOL_RETENTION_HOURS:-24} \
-            --poll-interval ${SPOOL_POLL_INTERVAL:-5} \
-            --sm-host ${STREAM_MANAGER_HOST:-localhost} \
-            --sm-port ${STREAM_MANAGER_PORT:-8088}
+            --file-stability-wait {configuration:/file_stability_wait} \
+            --stability-check-interval {configuration:/stability_check_interval} \
+            --stability-check-count {configuration:/stability_check_count} \
+            --max-stability-wait {configuration:/max_stability_wait} \
+            --stability-max-retries ${S3_SPOOLER_STABILITY_MAX_RETRIES:-{configuration:/stability_max_retries}} \
+            --stability-retry-delay ${S3_SPOOLER_STABILITY_RETRY_DELAY:-{configuration:/stability_retry_delay}}
     Artifacts:
       - URI: "s3://BUCKET_NAME/artifacts/com.example.S3Spooler/1.0.0/ggc-s3-spooler.zip"
         Digest: "PLACEHOLDER"

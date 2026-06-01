@@ -13,10 +13,34 @@ ComponentDependencies:
 
 ComponentConfiguration:
   DefaultConfiguration:
-    # CAN Blackbox 패턴: 핵심 설정만 레시피에서 관리, 세부 설정은 INI 파일 사용
+    # 🎯 핵심 설정
     spool_dir: "/var/spool/s3-spooler/spool"
     log_level: "INFO"
-    # 고급 설정은 spooler.ini에서 관리됩니다.
+
+    # 🔧 용량 관리
+    max_spool_size_mb: 900
+    file_retention_hours: 24
+    poll_interval_seconds: 5
+
+    # 🌐 Stream Manager 연결
+    stream_manager_host: "localhost"
+    stream_manager_port: 8088
+
+    # 📦 S3 Export 설정 (Pattern 2) - TGU 배포 시 설정
+    s3_bucket: "@@S3_BUCKET@@"
+    status_stream_name: ""
+
+    # ⚡ 성능 튜닝
+    incomplete_file_delay: 1.0
+    default_stream: "telemetry"
+
+    # 🔬 안정성 검증 (고급 설정)
+    file_stability_wait: 0.1
+    stability_check_interval: 0.2
+    stability_check_count: 3
+    max_stability_wait: 10.0
+    stability_max_retries: 3
+    stability_retry_delay: 1.0
 
 Manifests:
   - Platform:
@@ -36,11 +60,26 @@ Manifests:
             cbor2
       Run:
         Script: |
-          # CAN Blackbox 패턴: INI 설정 파일 우선 사용, 중요 설정은 레시피에서 오버라이드
+          # 레시피 중심 설정: ComponentConfiguration에서 모든 설정 제어
           PYTHONPATH={artifacts:path} python3 -m spooler \
             --config {artifacts:path}/spooler.ini \
             --spool-dir {configuration:/spool_dir} \
-            --log-level {configuration:/log_level}
+            --log-level {configuration:/log_level} \
+            --max-size-mb {configuration:/max_spool_size_mb} \
+            --retention-hours {configuration:/file_retention_hours} \
+            --poll-interval {configuration:/poll_interval_seconds} \
+            --sm-host {configuration:/stream_manager_host} \
+            --sm-port {configuration:/stream_manager_port} \
+            --s3-bucket {configuration:/s3_bucket} \
+            --status-stream-name {configuration:/status_stream_name} \
+            --incomplete-file-delay {configuration:/incomplete_file_delay} \
+            --default-stream {configuration:/default_stream} \
+            --file-stability-wait {configuration:/file_stability_wait} \
+            --stability-check-interval {configuration:/stability_check_interval} \
+            --stability-check-count {configuration:/stability_check_count} \
+            --max-stability-wait {configuration:/max_stability_wait} \
+            --stability-max-retries {configuration:/stability_max_retries} \
+            --stability-retry-delay {configuration:/stability_retry_delay}
       Shutdown:
         Script: "echo 'S3 Spooler shutting down'"
     Artifacts:

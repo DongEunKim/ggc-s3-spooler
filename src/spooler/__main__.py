@@ -88,6 +88,21 @@ def parse_args() -> argparse.Namespace:
         help="미완성 파일 보호 지연시간 (초)"
     )
     parser.add_argument("--default-stream", default="telemetry", help="라우팅 실패 시 기본 스트림")
+
+    # 🔬 안정성 검증 파라미터 (고급 설정)
+    parser.add_argument("--file-stability-wait", type=float, default=0.1,
+                        help="시간 기반 사전 필터링 대기 (초)")
+    parser.add_argument("--stability-check-interval", type=float, default=0.2,
+                        help="크기 기반 안정성 체크 간격 (초)")
+    parser.add_argument("--stability-check-count", type=int, default=3,
+                        help="연속 크기 불변 확인 횟수")
+    parser.add_argument("--max-stability-wait", type=float, default=10.0,
+                        help="최대 안정성 대기 시간 (초)")
+    parser.add_argument("--stability-max-retries", type=int, default=3,
+                        help="안정성 검증 최대 재시도 횟수")
+    parser.add_argument("--stability-retry-delay", type=float, default=1.0,
+                        help="안정성 검증 재시도 지연 시간 (초)")
+
     return parser.parse_args()
 
 

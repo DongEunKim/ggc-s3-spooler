@@ -148,6 +148,13 @@ class SpoolerConfig:
             'S3_SPOOLER_SM_PORT': 'stream_manager_port',
             'S3_SPOOLER_STATUS_STREAM': 'status_stream_name',
             'S3_SPOOLER_LOG_LEVEL': 'log_level',
+            # 🆕 안정성 검증 환경변수 추가
+            'S3_SPOOLER_FILE_STABILITY_WAIT': 'file_stability_wait',
+            'S3_SPOOLER_STABILITY_CHECK_INTERVAL': 'stability_check_interval',
+            'S3_SPOOLER_STABILITY_CHECK_COUNT': 'stability_check_count',
+            'S3_SPOOLER_MAX_STABILITY_WAIT': 'max_stability_wait',
+            'S3_SPOOLER_STABILITY_MAX_RETRIES': 'stability_max_retries',
+            'S3_SPOOLER_STABILITY_RETRY_DELAY': 'stability_retry_delay',
         }
 
         overrides = {}
@@ -207,9 +214,11 @@ class SpoolerConfig:
             s3_bucket=getattr(args, "s3_bucket", env_config.s3_bucket),
             status_stream_name=getattr(args, "status_stream_name", env_config.status_stream_name),
             incomplete_file_delay=getattr(args, "incomplete_file_delay", env_config.incomplete_file_delay),
-            # 하이브리드 안정성 검증 설정 (CLI에서 오버라이드 불가 - INI 전용)
-            file_stability_wait=env_config.file_stability_wait,
-            stability_check_interval=env_config.stability_check_interval,
-            stability_check_count=env_config.stability_check_count,
-            max_stability_wait=env_config.max_stability_wait,
+            # 🆕 안정성 검증 설정 (ComponentConfiguration 연동)
+            file_stability_wait=getattr(args, "file_stability_wait", env_config.file_stability_wait),
+            stability_check_interval=getattr(args, "stability_check_interval", env_config.stability_check_interval),
+            stability_check_count=getattr(args, "stability_check_count", env_config.stability_check_count),
+            max_stability_wait=getattr(args, "max_stability_wait", env_config.max_stability_wait),
+            stability_max_retries=getattr(args, "stability_max_retries", env_config.stability_max_retries),
+            stability_retry_delay=getattr(args, "stability_retry_delay", env_config.stability_retry_delay),
         )

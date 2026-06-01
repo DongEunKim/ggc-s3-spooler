@@ -43,9 +43,38 @@ spool_name = encode("telemetry-stream", "data/device-1/reading.json")
 # → "telemetry-stream__data!device-1!reading.json"
 ```
 
-## INI 설정 사용법
+## 설정 관리 방식
 
-CAN Blackbox 스타일 섹션별 설정으로 운영 환경에 맞는 튜닝이 가능하다:
+GGC S3 Spooler는 3가지 설정 방식을 지원합니다:
+
+### 1. Greengrass 레시피 설정 (권장 - TGU 환경)
+
+```yaml
+ComponentConfiguration:
+  DefaultConfiguration:
+    spool_dir: "/var/spool/s3-spooler"
+    max_spool_size_mb: 1200
+    log_level: "DEBUG"
+    s3_bucket: "tgu-telemetry-bucket"
+```
+
+- 배포 시 `--update-config`로 설정 변경
+- 코드 수정 없이 레시피만으로 모든 설정 제어 가능
+
+```bash
+# 배포 시 설정 오버라이드
+greengrass-cli deployment create --update-config '{
+  "com.example.S3Spooler": {
+    "spool_dir": "/mnt/ssd/spool",
+    "max_spool_size_mb": 1500,
+    "log_level": "DEBUG"
+  }
+}'
+```
+
+### 2. INI 파일 설정 (개발 환경)
+
+CAN Blackbox 스타일 섹션별 설정으로 개발 환경 튜닝:
 
 ```ini
 # spooler.ini
@@ -69,6 +98,18 @@ python -m spooler --config spooler.ini
 # CLI로 개별 설정 오버라이드
 python -m spooler --config spooler.ini --log-level INFO --spool-dir /tmp/test
 ```
+
+### 3. 환경변수 오버라이드 (긴급 조정)
+
+```bash
+export S3_SPOOLER_MAX_SIZE_MB=1500
+export S3_SPOOLER_LOG_LEVEL=WARNING
+export S3_SPOOLER_FILE_STABILITY_WAIT=0.5
+
+python -m spooler
+```
+
+**설정 우선순위**: ComponentConfiguration > 환경변수 > INI 파일 > 기본값
 
 ## 문서
 
