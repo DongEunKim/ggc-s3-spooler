@@ -16,3 +16,23 @@ deploy.yaml
 # Greengrass 빌드 산출물
 artifacts/
 *.zip
+
+# IDE and Editor files
+.vscode/
+*.swp
+*.swo
+*~
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Environment files
+.env
+.env.local
+
+# macOS
+.DS_Store
+
+# Local configuration (only .example should be tracked)
+spooler.ini
