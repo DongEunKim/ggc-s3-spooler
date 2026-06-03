@@ -152,6 +152,7 @@ def build_zip(
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         # 소스 코드: spooler/xxx.py
+        # src = src/spooler 만 globbing → 형제 패키지 src/spooler_testing 는 자동 제외.
         for py_file in sorted(src.rglob("*.py")):
             arcname = py_file.relative_to(src.parent)
             zf.write(py_file, arcname)
@@ -167,6 +168,25 @@ def build_zip(
         # 의존성 wheel: deps/xxx.whl
         for wheel in wheels:
             zf.write(wheel, f"deps/{wheel.name}")
+
+    # 가드: 테스트/벤치마크 코드가 번들에 누출되지 않았는지 검증 (재오염 방지).
+    # deps/ wheel 파일명은 검사 대상에서 제외한다.
+    forbidden = ("mock", "testing", "benchmark", "metrics", "psutil")
+    with zipfile.ZipFile(zip_path) as zf:
+        leaked = [
+            name for name in zf.namelist()
+            if not name.startswith("deps/")
+            and any(token in name.lower() for token in forbidden)
+        ]
+    if leaked:
+        zip_path.unlink(missing_ok=True)
+        print(
+            f"[ERROR] 빌드 가드 실패 — 테스트/벤치마크 코드가 번들에 포함됨:\n"
+            f"        {leaked}\n"
+            f"        해당 코드는 src/spooler_testing/ 로 분리되어야 합니다.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     size_kb = zip_path.stat().st_size // 1024
     print(f"[BUILD] 아티팩트: {zip_path.relative_to(PROJECT_ROOT)}  ({size_kb} KB)")

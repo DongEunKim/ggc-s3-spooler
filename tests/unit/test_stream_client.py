@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from spooler.stream_client import MockAutoStreamManagerClient
+from spooler_testing.mock_clients import MockAutoStreamManagerClient
 
 
 @pytest.fixture

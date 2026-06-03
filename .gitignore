@@ -10,6 +10,11 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
+# 성능 벤치마크 산출물 (재생성 가능 — 버전관리 제외)
+benchmark_results_*.json
+performance_analysis.png
+resource_usage.png
+
 # 배포 설정 (실제 버킷/ARN 포함 — 버전관리 제외)
 deploy.yaml
 

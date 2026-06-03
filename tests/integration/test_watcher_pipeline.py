@@ -6,8 +6,8 @@ import pytest
 
 from spooler.config import SpoolerConfig
 from spooler.filename_codec import encode
-from spooler.stream_client import MockAutoStreamManagerClient
 from spooler.watcher import SpoolWatcher
+from spooler_testing.mock_clients import MockAutoStreamManagerClient
 
 
 @pytest.fixture

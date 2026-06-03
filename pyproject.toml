@@ -30,6 +30,8 @@ deploy = [
 ]
 
 [tool.hatch.build.targets.wheel]
+# 운영 패키지만 포함. 테스트/벤치마크 전용 src/spooler_testing 는 의도적으로 제외
+# (psutil 등 TGU 미탑재 의존성 격리 — 배포 비오염).
 packages = ["src/spooler"]
 
 [tool.pytest.ini_options]

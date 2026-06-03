@@ -18,10 +18,12 @@ from spooler.client_protocol import (
     ensure_protocol_compliance
 )
 from spooler.stream_client import (
-    MockAutoStreamManagerClient,
-    MockS3ExportStreamManagerClient,
     S3ExportStreamManagerClient,
     AutoStreamManagerClient
+)
+from spooler_testing.mock_clients import (
+    MockAutoStreamManagerClient,
+    MockS3ExportStreamManagerClient,
 )
 
 
