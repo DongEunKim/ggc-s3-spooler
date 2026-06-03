@@ -16,8 +16,8 @@ from watchdog.observers import Observer
 
 from .client_protocol import FileTransferClient
 from .config import SpoolerConfig
-from .filename_codec import decode, is_spool_file
 from .file_stability import wait_for_file_stability
+from .filename_codec import SpoolFileMeta, decode, is_spool_file
 
 logger = logging.getLogger(__name__)
 
@@ -164,7 +164,7 @@ class SpoolWatcher:
             logger.debug("시간 기반 fallback 적용: %s", path.name)
             return True
 
-    async def _transfer_to_stream(self, path: Path, meta: Any) -> None:
+    async def _transfer_to_stream(self, path: Path, meta: SpoolFileMeta) -> None:
         """Stream Manager로 파일 전송."""
         try:
             await asyncio.get_event_loop().run_in_executor(
@@ -172,11 +172,13 @@ class SpoolWatcher:
                 lambda: self._client.append_file(meta.stream_id, meta.s3_key, path),
             )
             # 파일 삭제는 stream client에서 처리
-            logger.info("전송 완료: %s → s3://%s/%s", path.name, self._client._s3_bucket if hasattr(self._client, '_s3_bucket') else '?', meta.s3_key)
+            bucket = getattr(self._client, "_s3_bucket", "?")
+            logger.info("전송 완료: %s → s3://%s/%s", path.name, bucket, meta.s3_key)
         except Exception as exc:
             # Stream Manager 스트림 미등록 오류 감지
             exc_str = str(exc).lower()
-            if any(keyword in exc_str for keyword in ['stream', 'not found', 'does not exist', 'unknown']):
+            unregistered_keywords = ("stream", "not found", "does not exist", "unknown")
+            if any(keyword in exc_str for keyword in unregistered_keywords):
                 # 미등록 스트림으로 판단되는 오류
                 logger.error(
                     "미등록 스트림 오류: %s (stream: %s) - 파일 삭제",

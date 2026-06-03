@@ -9,7 +9,10 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .file_stability import StabilityConfig
 
 
 @dataclass
@@ -64,7 +67,7 @@ class SpoolerConfig:
             logger.warning("status_stream_name 없음: S3 업로드 상태 확인이 제한될 수 있습니다.")
 
     @property
-    def stability_config(self) -> "StabilityConfig":
+    def stability_config(self) -> StabilityConfig:
         """파일 안정성 검증 설정을 반환한다."""
         from .file_stability import StabilityConfig
         return StabilityConfig(
@@ -92,7 +95,9 @@ class SpoolerConfig:
             if missing_sections:
                 raise ValueError(f"필수 섹션 누락: {missing_sections}")
 
-            # CAN Blackbox 패턴: 섹션별 설정 파싱
+            # 섹션별 설정 파싱.
+            # configparser 의 fallback 은 섹션/옵션이 없을 때 자동 적용되므로
+            # 별도 has_section 분기는 불필요하다.
             return cls(
                 # [spooler] 섹션
                 spool_dir=Path(config.get(
@@ -101,44 +106,38 @@ class SpoolerConfig:
                 log_level=config.get("spooler", "log_level", fallback="INFO"),
 
                 # [cleanup] 섹션 (선택적)
-                max_spool_size_mb=config.getint("cleanup", "max_spool_size_mb", fallback=900) if config.has_section("cleanup") else 900,
-                file_retention_hours=config.getint("cleanup", "file_retention_hours", fallback=24) if config.has_section("cleanup") else 24,
-                poll_interval_seconds=config.getint("cleanup", "poll_interval_seconds", fallback=5) if config.has_section("cleanup") else 5,
+                max_spool_size_mb=config.getint("cleanup", "max_spool_size_mb", fallback=900),
+                file_retention_hours=config.getint("cleanup", "file_retention_hours", fallback=120),
+                poll_interval_seconds=config.getint("cleanup", "poll_interval_seconds", fallback=5),
 
                 # [stability] 섹션 - 하이브리드 안정성 검증 (선택적)
                 file_stability_wait=config.getfloat(
                     "stability", "file_stability_wait", fallback=0.1
-                ) if config.has_section("stability") else 0.1,
+                ),
                 stability_check_interval=config.getfloat(
                     "stability", "stability_check_interval", fallback=0.2
-                ) if config.has_section("stability") else 0.2,
-                stability_check_count=config.getint("stability", "stability_check_count", fallback=3) if config.has_section("stability") else 3,
-                max_stability_wait=config.getfloat("stability", "max_stability_wait", fallback=10.0) if config.has_section("stability") else 10.0,
+                ),
+                stability_check_count=config.getint(
+                    "stability", "stability_check_count", fallback=3
+                ),
+                max_stability_wait=config.getfloat(
+                    "stability", "max_stability_wait", fallback=10.0
+                ),
 
                 # [stream_manager] 섹션 (선택적)
-                stream_manager_host=config.get("stream_manager", "host", fallback="localhost") if config.has_section("stream_manager") else "localhost",
-                stream_manager_port=config.getint("stream_manager", "port", fallback=8088) if config.has_section("stream_manager") else 8088,
-
-                # 기존 설정 (하위 호환성)
-                incomplete_file_delay=1.0,  # deprecated
+                stream_manager_host=config.get("stream_manager", "host", fallback="localhost"),
+                stream_manager_port=config.getint("stream_manager", "port", fallback=8088),
 
                 # [s3_export] 섹션 (선택적)
-                s3_bucket=(
-                    config.get("s3_export", "bucket", fallback="")
-                    if config.has_section("s3_export") else ""
-                ),
-                status_stream_name=(
-                    config.get("s3_export", "status_stream_name", fallback="")
-                    if config.has_section("s3_export") else ""
-                ),
-
+                s3_bucket=config.get("s3_export", "bucket", fallback=""),
+                status_stream_name=config.get("s3_export", "status_stream_name", fallback=""),
             )
 
         except Exception as e:
             raise ValueError(f"INI 파일 파싱 오류 ({ini_path}): {e}") from e
 
     @classmethod
-    def from_env_override(cls, base_config: 'SpoolerConfig') -> 'SpoolerConfig':
+    def from_env_override(cls, base_config: SpoolerConfig) -> SpoolerConfig:
         """환경변수로 핵심 설정을 오버라이드합니다."""
         env_mapping = {
             'S3_SPOOLER_S3_BUCKET': 's3_bucket',
@@ -166,13 +165,11 @@ class SpoolerConfig:
         return dataclasses.replace(base_config, **overrides)
 
     @staticmethod
-    def _convert_env_value(attr_name: str, value: str) -> Any:
-        """환경변수 값을 적절한 타입으로 변환합니다."""
-        if attr_name.endswith('_mb') or attr_name.endswith('_port'):
+    def _convert_env_value(attr_name: str, value: str) -> Any:  # noqa: ANN401
+        """환경변수 값을 적절한 타입으로 변환합니다 (int/float/str)."""
+        if attr_name.endswith(('_mb', '_port', '_hours')):
             return int(value)
-        elif attr_name.endswith('_hours'):
-            return int(value)
-        elif attr_name.endswith('_delay') or attr_name.endswith('_interval'):
+        if attr_name.endswith(('_delay', '_interval')):
             return float(value)
         return value
 
@@ -201,24 +198,33 @@ class SpoolerConfig:
         # 2. 환경변수로 오버라이드
         env_config = cls.from_env_override(base_config)
 
-        # 3. CLI 인수로 최종 오버라이드 (우선순위 최고)
-        spool_dir = Path(args.spool_dir)
-        return cls(
-            spool_dir=spool_dir,
-            max_spool_size_mb=args.max_size_mb,
-            file_retention_hours=args.retention_hours,
-            poll_interval_seconds=args.poll_interval,
-            stream_manager_host=args.sm_host,
-            stream_manager_port=args.sm_port,
-            log_level=args.log_level,
-            s3_bucket=getattr(args, "s3_bucket", env_config.s3_bucket),
-            status_stream_name=getattr(args, "status_stream_name", env_config.status_stream_name),
-            incomplete_file_delay=getattr(args, "incomplete_file_delay", env_config.incomplete_file_delay),
-            # 🆕 안정성 검증 설정 (ComponentConfiguration 연동)
-            file_stability_wait=getattr(args, "file_stability_wait", env_config.file_stability_wait),
-            stability_check_interval=getattr(args, "stability_check_interval", env_config.stability_check_interval),
-            stability_check_count=getattr(args, "stability_check_count", env_config.stability_check_count),
-            max_stability_wait=getattr(args, "max_stability_wait", env_config.max_stability_wait),
-            stability_max_retries=getattr(args, "stability_max_retries", env_config.stability_max_retries),
-            stability_retry_delay=getattr(args, "stability_retry_delay", env_config.stability_retry_delay),
+        # 3. CLI 인수로 최종 오버라이드 (우선순위 최고).
+        # CLI 인수가 명시되지 않으면 None(센티넬)이므로 env_config 값을 유지한다.
+        # argparse 기본값을 None 으로 두었기에 "사용자 미지정"과 "기본값"을 구분할 수 있다.
+        # (arg 이름, config 필드 이름)
+        arg_to_field = (
+            ("spool_dir", "spool_dir"),
+            ("max_size_mb", "max_spool_size_mb"),
+            ("retention_hours", "file_retention_hours"),
+            ("poll_interval", "poll_interval_seconds"),
+            ("sm_host", "stream_manager_host"),
+            ("sm_port", "stream_manager_port"),
+            ("log_level", "log_level"),
+            ("s3_bucket", "s3_bucket"),
+            ("status_stream_name", "status_stream_name"),
+            ("incomplete_file_delay", "incomplete_file_delay"),
+            ("file_stability_wait", "file_stability_wait"),
+            ("stability_check_interval", "stability_check_interval"),
+            ("stability_check_count", "stability_check_count"),
+            ("max_stability_wait", "max_stability_wait"),
+            ("stability_max_retries", "stability_max_retries"),
+            ("stability_retry_delay", "stability_retry_delay"),
         )
+        overrides: dict[str, Any] = {}
+        for arg_name, field in arg_to_field:
+            value = getattr(args, arg_name, None)
+            if value is not None:
+                overrides[field] = value
+
+        merged = dataclasses.replace(env_config, **overrides)
+        return dataclasses.replace(merged, spool_dir=Path(merged.spool_dir))

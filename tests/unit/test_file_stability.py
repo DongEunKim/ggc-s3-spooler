@@ -13,7 +13,6 @@ from spooler.file_stability import (
     FileStabilityError,
     StabilityConfig,
     is_file_stable_async,
-    is_file_stable_sync,
     wait_for_file_stability,
 )
 
@@ -38,64 +37,6 @@ class TestStabilityConfig:
         assert config.check_count == 5
         assert config.check_interval == 0.2
         assert config.timeout == 10.0
-
-
-class TestSyncStabilityCheck:
-    """동기식 안정성 검증 테스트."""
-
-    def test_nonexistent_file(self, tmp_path):
-        """존재하지 않는 파일 처리."""
-        config = StabilityConfig(check_count=2, check_interval=0.1)
-        nonexistent = tmp_path / "nonexistent.txt"
-
-        result = is_file_stable_sync(nonexistent, config)
-        assert result is False
-
-    def test_stable_file(self, tmp_path):
-        """안정한 파일 (크기 불변) 검증."""
-        config = StabilityConfig(check_count=3, check_interval=0.1)
-        test_file = tmp_path / "stable.txt"
-        test_file.write_text("content")
-
-        result = is_file_stable_sync(test_file, config)
-        assert result is True
-
-    def test_growing_file(self, tmp_path):
-        """크기가 증가하는 파일 감지."""
-        config = StabilityConfig(check_count=3, check_interval=0.2)
-        test_file = tmp_path / "growing.txt"
-        test_file.write_text("initial")
-
-        # 파일이 0.15초 후에 커지도록 설정
-        def delayed_write():
-            import time
-            time.sleep(0.15)
-            with open(test_file, 'a') as f:
-                f.write(" more content")
-
-        import threading
-        thread = threading.Thread(target=delayed_write)
-        thread.start()
-
-        try:
-            result = is_file_stable_sync(test_file, config)
-            assert result is False  # 크기가 변했으므로 불안정
-        finally:
-            thread.join()
-
-    def test_timeout_protection(self, tmp_path):
-        """타임아웃 보호 기능."""
-        config = StabilityConfig(check_count=100, check_interval=0.1, timeout=0.3)
-        test_file = tmp_path / "timeout.txt"
-        test_file.write_text("content")
-
-        import time
-        start_time = time.time()
-        result = is_file_stable_sync(test_file, config)
-        elapsed = time.time() - start_time
-
-        assert result is False  # 타임아웃으로 실패
-        assert elapsed < 1.0    # 타임아웃이 작동함
 
 
 class TestAsyncStabilityCheck:

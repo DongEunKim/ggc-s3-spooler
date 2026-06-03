@@ -104,61 +104,6 @@ async def is_file_stable_async(
         raise FileStabilityError(f"안정성 검증 실패: {file_path.name}") from e
 
 
-def is_file_stable_sync(
-    file_path: Path,
-    config: StabilityConfig,
-) -> bool:
-    """
-    동기식 파일 안정성 검증 — CAN Blackbox 원본 패턴.
-
-    테스트 또는 동기식 컨텍스트에서 사용한다.
-
-    Args:
-        file_path: 검증할 파일 경로
-        config: 안정성 검증 설정
-
-    Returns:
-        True if 파일이 안정적
-        False if 불안정하거나 오류
-    """
-    if not file_path.exists():
-        return False
-
-    start_time = time.time()
-    previous_size = -1
-
-    try:
-        for i in range(config.check_count):
-            # 타임아웃 검사
-            if time.time() - start_time > config.timeout:
-                logger.warning(
-                    "파일 안정성 검증 타임아웃: %s (%.1fs 초과)",
-                    file_path.name, config.timeout
-                )
-                return False
-
-            # 현재 파일 크기 확인
-            try:
-                current_size = file_path.stat().st_size
-            except OSError:
-                return False
-
-            # 크기 변화 감지
-            if i > 0 and current_size != previous_size:
-                return False
-
-            # 대기 (마지막 체크 제외)
-            if i < config.check_count - 1:
-                time.sleep(config.check_interval)
-
-            previous_size = current_size
-
-        return True
-
-    except Exception:
-        return False
-
-
 async def wait_for_file_stability(
     file_path: Path,
     config: StabilityConfig,

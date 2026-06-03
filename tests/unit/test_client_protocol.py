@@ -10,13 +10,7 @@ FileTransferClient 프로토콜 준수와 Mock 격리를 검증한다:
 import pytest
 from pathlib import Path
 
-from spooler.client_protocol import (
-    FileTransferClient,
-    verify_client_protocol,
-    ClientContextManager,
-    is_file_transfer_client,
-    ensure_protocol_compliance
-)
+from spooler.client_protocol import FileTransferClient
 from spooler.stream_client import (
     S3ExportStreamManagerClient,
     AutoStreamManagerClient
@@ -24,6 +18,12 @@ from spooler.stream_client import (
 from spooler_testing.mock_clients import (
     MockAutoStreamManagerClient,
     MockS3ExportStreamManagerClient,
+)
+from spooler_testing.protocol_helpers import (
+    ClientContextManager,
+    ensure_protocol_compliance,
+    is_file_transfer_client,
+    verify_client_protocol,
 )
 
 

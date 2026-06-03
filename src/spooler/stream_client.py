@@ -145,15 +145,16 @@ class S3ExportStreamManagerClient:
             logger.error("상태 확인 실패 (seq=%d): %s", sequence_number, exc)
             return False
 
-    def _check_status_message(self, message: object, target_sequence: int) -> bool:
+    def _check_status_message(self, message: Any, target_sequence: int) -> bool:  # noqa: ANN401
         """StatusMessage를 파싱하여 대상 시퀀스의 성공 여부를 확인한다."""
         try:
+            from stream_manager.data import Status, StatusMessage
             from stream_manager.util import Util
-            from stream_manager.data import StatusMessage, Status
 
             status_msg = Util.deserialize_json_bytes_to_obj(message.payload, StatusMessage)
-            if status_msg.status_context and status_msg.status_context.sequence_number == target_sequence:
-                return status_msg.status == Status.Success
+            ctx = status_msg.status_context
+            if ctx and ctx.sequence_number == target_sequence:
+                return bool(status_msg.status == Status.Success)
         except Exception:
             pass
         return False

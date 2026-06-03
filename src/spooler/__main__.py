@@ -71,36 +71,37 @@ def parse_args() -> argparse.Namespace:
     # INI 설정 파일 지원
     parser.add_argument("--config", "-c", help="INI 설정 파일 경로 (기본: spooler.ini)")
 
-    # 데몬 및 stream 서브커맨드 공유 인수 (INI 파일 설정을 오버라이드)
-    parser.add_argument("--spool-dir", default="/tmp/s3-spooler/spool")
-    parser.add_argument("--max-size-mb", type=int, default=900)
-    parser.add_argument("--retention-hours", type=int, default=24)
-    parser.add_argument("--poll-interval", type=int, default=5)
-    parser.add_argument("--sm-host", default="localhost")
-    parser.add_argument("--sm-port", type=int, default=8088)
-    parser.add_argument("--log-level", default="INFO")
-    parser.add_argument("--s3-bucket", default="", help="A-07 Pattern 2 S3 버킷명")
-    parser.add_argument("--status-stream-name", default="", help="A-07 상태 스트림 이름")
+    # 데몬 공유 인수 (INI/환경변수 설정을 오버라이드).
+    # 기본값은 None(미지정) — 실제 기본값은 SpoolerConfig dataclass가 보유하며,
+    # 우선순위 CLI > 환경변수 > INI > 기본값 이 from_args 에서 적용된다.
+    parser.add_argument("--spool-dir", default=None)
+    parser.add_argument("--max-size-mb", type=int, default=None)
+    parser.add_argument("--retention-hours", type=int, default=None)
+    parser.add_argument("--poll-interval", type=int, default=None)
+    parser.add_argument("--sm-host", default=None)
+    parser.add_argument("--sm-port", type=int, default=None)
+    parser.add_argument("--log-level", default=None)
+    parser.add_argument("--s3-bucket", default=None, help="A-07 Pattern 2 S3 버킷명")
+    parser.add_argument("--status-stream-name", default=None, help="A-07 상태 스트림 이름")
     parser.add_argument(
         "--incomplete-file-delay",
         type=float,
-        default=1.0,
+        default=None,
         help="미완성 파일 보호 지연시간 (초)"
     )
-    parser.add_argument("--default-stream", default="telemetry", help="라우팅 실패 시 기본 스트림")
 
     # 🔬 안정성 검증 파라미터 (고급 설정)
-    parser.add_argument("--file-stability-wait", type=float, default=0.1,
+    parser.add_argument("--file-stability-wait", type=float, default=None,
                         help="시간 기반 사전 필터링 대기 (초)")
-    parser.add_argument("--stability-check-interval", type=float, default=0.2,
+    parser.add_argument("--stability-check-interval", type=float, default=None,
                         help="크기 기반 안정성 체크 간격 (초)")
-    parser.add_argument("--stability-check-count", type=int, default=3,
+    parser.add_argument("--stability-check-count", type=int, default=None,
                         help="연속 크기 불변 확인 횟수")
-    parser.add_argument("--max-stability-wait", type=float, default=10.0,
+    parser.add_argument("--max-stability-wait", type=float, default=None,
                         help="최대 안정성 대기 시간 (초)")
-    parser.add_argument("--stability-max-retries", type=int, default=3,
+    parser.add_argument("--stability-max-retries", type=int, default=None,
                         help="안정성 검증 최대 재시도 횟수")
-    parser.add_argument("--stability-retry-delay", type=float, default=1.0,
+    parser.add_argument("--stability-retry-delay", type=float, default=None,
                         help="안정성 검증 재시도 지연 시간 (초)")
 
     return parser.parse_args()

@@ -1,5 +1,6 @@
 """INI 설정 파일 기능 테스트."""
 
+import argparse
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -324,3 +325,54 @@ class TestConfigIntegration:
         assert config.file_stability_wait == 0.1
         assert config.max_stability_wait == 10.0
         assert config.incomplete_file_delay == 1.0  # deprecated, 하위 호환성
+
+
+class TestEnvOverridePrecedence:
+    """우선순위 CLI > 환경변수 > INI > 기본값 검증 (센티넬 기반)."""
+
+    @staticmethod
+    def _daemon_args(**overrides: object) -> argparse.Namespace:
+        """실제 argparse 출력처럼 모든 데몬 인수를 None 으로 채운 Namespace."""
+        base: dict[str, object] = {
+            "config": None,
+            "spool_dir": None,
+            "max_size_mb": None,
+            "retention_hours": None,
+            "poll_interval": None,
+            "sm_host": None,
+            "sm_port": None,
+            "log_level": None,
+            "s3_bucket": None,
+            "status_stream_name": None,
+            "incomplete_file_delay": None,
+            "file_stability_wait": None,
+            "stability_check_interval": None,
+            "stability_check_count": None,
+            "max_stability_wait": None,
+            "stability_max_retries": None,
+            "stability_retry_delay": None,
+        }
+        base.update(overrides)
+        return argparse.Namespace(**base)
+
+    def test_env_used_when_cli_absent(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """CLI 미지정 시 환경변수가 적용된다 (이전엔 무시되던 버그)."""
+        monkeypatch.setenv("S3_SPOOLER_S3_BUCKET", "env-bucket")
+        with patch.object(Path, "exists", return_value=False):
+            config = SpoolerConfig.from_args(self._daemon_args())
+        assert config.s3_bucket == "env-bucket"
+
+    def test_cli_beats_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """CLI 인수가 환경변수보다 우선한다."""
+        monkeypatch.setenv("S3_SPOOLER_S3_BUCKET", "env-bucket")
+        with patch.object(Path, "exists", return_value=False):
+            config = SpoolerConfig.from_args(self._daemon_args(s3_bucket="cli-bucket"))
+        assert config.s3_bucket == "cli-bucket"
+
+    def test_default_when_neither(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """CLI·환경변수·INI 모두 없으면 dataclass 기본값을 사용한다."""
+        monkeypatch.delenv("S3_SPOOLER_S3_BUCKET", raising=False)
+        with patch.object(Path, "exists", return_value=False):
+            config = SpoolerConfig.from_args(self._daemon_args())
+        assert config.s3_bucket == ""
+        assert config.spool_dir == Path("/var/spool/s3-spooler/spool")
