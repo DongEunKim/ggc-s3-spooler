@@ -17,7 +17,7 @@ from collections.abc import Callable
 from .cleaner import SpoolCleaner
 from .config import SpoolerConfig
 from .filename_codec import decode, encode
-from .stream_client import AutoStreamManagerClient
+from .stream_client import S3SpoolerClient
 from .watcher import SpoolWatcher
 
 
@@ -142,7 +142,7 @@ async def main() -> None:
     logger = logging.getLogger(__name__)
     logger.info("S3 Spooler 시작 (spool_dir=%s)", config.spool_dir)
 
-    client = AutoStreamManagerClient(
+    client = S3SpoolerClient(
         config.stream_manager_host,
         config.stream_manager_port,
         config.s3_bucket,

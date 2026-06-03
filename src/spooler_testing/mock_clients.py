@@ -2,14 +2,14 @@
 테스트/벤치마크 전용 Mock Stream Manager 클라이언트 — Pattern 2 전용.
 
 운영 패키지(`spooler`)에서 분리된 테스트 더블 모음.
-실제 Stream Manager(`spooler.stream_client.S3ExportStreamManagerClient`)와
+실제 Stream Manager(`spooler.stream_client.S3ExportUploader`)와
 동일한 인터페이스(FileTransferClient 프로토콜)를 구현하여, 개발환경에서
 Stream Manager 없이 파이프라인을 검증한다.
 
-  - MockS3ExportStreamManagerClient        : 결정론적 기본 Mock
-  - MockAutoStreamManagerClient            : 위를 감싼 자동 삭제 워크플로우 Mock
-  - RealisticMockS3ExportStreamManagerClient: 지연/대역폭/오류 시뮬레이션 Mock
-  - RealisticMockAutoStreamManagerClient   : 위를 감싼 현실적 성능 시뮬레이션 Mock
+  - MockS3ExportUploader        : 결정론적 기본 Mock
+  - MockS3SpoolerClient            : 위를 감싼 자동 삭제 워크플로우 Mock
+  - RealisticMockS3ExportUploader: 지연/대역폭/오류 시뮬레이션 Mock
+  - RealisticMockS3SpoolerClient   : 위를 감싼 현실적 성능 시뮬레이션 Mock
 
 ⚠️  운영 코드에서 import 금지. 이 모듈은 배포 번들에 포함되지 않는다.
 """
@@ -23,11 +23,11 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-class MockS3ExportStreamManagerClient:
+class MockS3ExportUploader:
     """
     CAN Blackbox Pattern Mock — Pattern 2 전용.
 
-    S3ExportStreamManagerClient와 정확히 동일한 동작을 시뮬레이션한다.
+    S3ExportUploader와 정확히 동일한 동작을 시뮬레이션한다.
     """
 
     def __init__(self, host: str, port: int, s3_bucket: str, status_stream_name: str = "") -> None:
@@ -94,9 +94,9 @@ class MockS3ExportStreamManagerClient:
         return True
 
 
-class MockAutoStreamManagerClient:
+class MockS3SpoolerClient:
     """
-    CAN Blackbox Pattern Mock — AutoStreamManagerClient 완전 시뮬레이션.
+    CAN Blackbox Pattern Mock — S3SpoolerClient 완전 시뮬레이션.
 
     Pattern 2 전용 Stream Manager Mock 클라이언트.
 
@@ -118,7 +118,7 @@ class MockAutoStreamManagerClient:
         self._status_stream_name = status_stream_name
 
         # Pattern 2 전용
-        self._client = MockS3ExportStreamManagerClient(host, port, s3_bucket, status_stream_name)
+        self._client = MockS3ExportUploader(host, port, s3_bucket, status_stream_name)
         logger.info("Pattern 2 전용 모드: bucket=%s", s3_bucket)
 
     def connect(self) -> None:
@@ -163,7 +163,7 @@ class MockAutoStreamManagerClient:
         return "Pattern 2"
 
 
-class RealisticMockS3ExportStreamManagerClient:
+class RealisticMockS3ExportUploader:
     """
     실제 Stream Manager 동작을 정확히 시뮬레이션하는 Mock 클라이언트.
 
@@ -297,9 +297,9 @@ class RealisticMockS3ExportStreamManagerClient:
         return error_messages.get(error_type, f"Unknown error during {error_type}")
 
 
-class RealisticMockAutoStreamManagerClient:
+class RealisticMockS3SpoolerClient:
     """
-    현실적 AutoStreamManagerClient Mock — 실제 성능 특성 시뮬레이션.
+    현실적 S3SpoolerClient Mock — 실제 성능 특성 시뮬레이션.
 
     네트워크 조건, 오류 상황, 대역폭 제한 등을 반영하여
     실제 TGU 환경에서의 성능을 예측할 수 있도록 한다.
@@ -319,7 +319,7 @@ class RealisticMockAutoStreamManagerClient:
         self._simulation_params = simulation_params
 
         # 현실적 Pattern 2 클라이언트 생성
-        self._client = RealisticMockS3ExportStreamManagerClient(
+        self._client = RealisticMockS3ExportUploader(
             host, port, s3_bucket, status_stream_name, **simulation_params
         )
         logger.info("현실적 Pattern 2 Mock 모드: bucket=%s", s3_bucket)

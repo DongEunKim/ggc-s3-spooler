@@ -12,12 +12,12 @@ from pathlib import Path
 
 from spooler.client_protocol import FileTransferClient
 from spooler.stream_client import (
-    S3ExportStreamManagerClient,
-    AutoStreamManagerClient
+    S3ExportUploader,
+    S3SpoolerClient
 )
 from spooler_testing.mock_clients import (
-    MockAutoStreamManagerClient,
-    MockS3ExportStreamManagerClient,
+    MockS3SpoolerClient,
+    MockS3ExportUploader,
 )
 from spooler_testing.protocol_helpers import (
     ClientContextManager,
@@ -31,18 +31,18 @@ class TestProtocolCompliance:
     """모든 클라이언트 클래스가 FileTransferClient 프로토콜을 구현하는지 검증"""
 
     @pytest.mark.parametrize("client_class", [
-        MockAutoStreamManagerClient,
-        MockS3ExportStreamManagerClient,
-        S3ExportStreamManagerClient,
-        AutoStreamManagerClient
+        MockS3SpoolerClient,
+        MockS3ExportUploader,
+        S3ExportUploader,
+        S3SpoolerClient
     ])
     def test_client_implements_protocol(self, client_class: type) -> None:
         """각 클라이언트 클래스가 필수 메서드를 구현하는지 확인"""
         ensure_protocol_compliance(client_class)
 
     @pytest.mark.parametrize("client_class", [
-        MockAutoStreamManagerClient,
-        MockS3ExportStreamManagerClient,
+        MockS3SpoolerClient,
+        MockS3ExportUploader,
     ])
     def test_mock_clients_are_protocol_instances(self, client_class: type) -> None:
         """Mock 클라이언트 인스턴스가 런타임에 프로토콜을 준수하는지 확인"""
@@ -52,7 +52,7 @@ class TestProtocolCompliance:
 
     def test_protocol_verification_function(self) -> None:
         """verify_client_protocol 함수가 올바르게 동작하는지 확인"""
-        client = MockAutoStreamManagerClient("localhost", 8088, "test-bucket")
+        client = MockS3SpoolerClient("localhost", 8088, "test-bucket")
         verified_client = verify_client_protocol(client)
         assert verified_client is client
         assert isinstance(verified_client, FileTransferClient)
@@ -78,7 +78,7 @@ class TestClientContextManager:
 
     def test_context_manager_with_mock_client(self) -> None:
         """Mock 클라이언트와 함께 컨텍스트 매니저 사용"""
-        client = MockS3ExportStreamManagerClient("localhost", 8088, "test-bucket")
+        client = MockS3ExportUploader("localhost", 8088, "test-bucket")
 
         with ClientContextManager(client) as managed_client:
             assert isinstance(managed_client, FileTransferClient)
@@ -88,7 +88,7 @@ class TestClientContextManager:
 
     def test_context_manager_handles_exceptions(self) -> None:
         """컨텍스트 매니저가 예외 상황에서도 정리를 수행하는지 확인"""
-        client = MockS3ExportStreamManagerClient("localhost", 8088, "test-bucket")
+        client = MockS3ExportUploader("localhost", 8088, "test-bucket")
 
         try:
             with ClientContextManager(client):
@@ -111,8 +111,8 @@ class TestPattern2ClientBehavior:
     """Pattern 2 클라이언트들의 동작 검증"""
 
     def test_auto_client_pattern2_selection(self, tmp_path: Path) -> None:
-        """MockAutoStreamManagerClient가 Pattern 2를 사용하는지 확인"""
-        client = MockAutoStreamManagerClient("localhost", 8088, "test-bucket")
+        """MockS3SpoolerClient가 Pattern 2를 사용하는지 확인"""
+        client = MockS3SpoolerClient("localhost", 8088, "test-bucket")
         client.connect()
 
         assert client.get_pattern() == "Pattern 2"
@@ -133,8 +133,8 @@ class TestPattern2ClientBehavior:
         assert "test-bucket" in task_def
 
     def test_s3export_client_behavior(self, tmp_path: Path) -> None:
-        """MockS3ExportStreamManagerClient의 기본 동작 확인"""
-        client = MockS3ExportStreamManagerClient("localhost", 8088, "test-bucket")
+        """MockS3ExportUploader의 기본 동작 확인"""
+        client = MockS3ExportUploader("localhost", 8088, "test-bucket")
         client.connect()
 
         test_file = tmp_path / "s3export_test.txt"
@@ -153,8 +153,8 @@ class TestPattern2ClientBehavior:
     def test_protocol_polymorphic_usage(self, tmp_path: Path) -> None:
         """프로토콜을 통해 다형성 사용이 가능한지 확인"""
         clients: list[FileTransferClient] = [
-            MockAutoStreamManagerClient("localhost", 8088, "test-bucket"),
-            MockS3ExportStreamManagerClient("localhost", 8088, "test-bucket")
+            MockS3SpoolerClient("localhost", 8088, "test-bucket"),
+            MockS3ExportUploader("localhost", 8088, "test-bucket")
         ]
 
         for i, client in enumerate(clients):
@@ -168,8 +168,8 @@ class TestPattern2ClientBehavior:
     def test_pattern2_requires_bucket(self) -> None:
         """Pattern 2 클라이언트들이 s3_bucket을 필수로 요구하는지 확인"""
         with pytest.raises(ValueError, match="Pattern 2 전용 모드: s3_bucket이 필수입니다"):
-            MockAutoStreamManagerClient("localhost", 8088, "")
+            MockS3SpoolerClient("localhost", 8088, "")
 
-        # S3ExportStreamManagerClient는 빈 버킷도 허용 (기본 설정)
-        client = MockS3ExportStreamManagerClient("localhost", 8088, "")
+        # S3ExportUploader는 빈 버킷도 허용 (기본 설정)
+        client = MockS3ExportUploader("localhost", 8088, "")
         assert client is not None

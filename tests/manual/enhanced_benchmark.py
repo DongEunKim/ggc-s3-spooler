@@ -38,8 +38,8 @@ from spooler.filename_codec import encode
 from spooler.watcher import SpoolWatcher
 from spooler.cleaner import SpoolCleaner
 from spooler_testing.mock_clients import (
-    MockAutoStreamManagerClient,
-    RealisticMockAutoStreamManagerClient
+    MockS3SpoolerClient,
+    RealisticMockS3SpoolerClient
 )
 from spooler_testing.metrics import get_metrics, reset_global_metrics, PerformanceMetrics
 
@@ -75,13 +75,13 @@ class EnhancedHighLoadTester:
 
         # 클라이언트 선택
         if use_realistic_mock:
-            self.client = RealisticMockAutoStreamManagerClient(
+            self.client = RealisticMockS3SpoolerClient(
                 host="localhost", port=8088, s3_bucket="test-bucket",
                 status_stream_name="status-stream", **self.simulation_params
             )
             logger.info("현실적 Mock 클라이언트 사용: %s", self.simulation_params)
         else:
-            self.client = MockAutoStreamManagerClient(
+            self.client = MockS3SpoolerClient(
                 host="localhost", port=8088, s3_bucket="test-bucket"
             )
             logger.info("기본 Mock 클라이언트 사용")

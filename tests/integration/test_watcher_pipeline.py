@@ -7,7 +7,7 @@ import pytest
 from spooler.config import SpoolerConfig
 from spooler.filename_codec import encode
 from spooler.watcher import SpoolWatcher
-from spooler_testing.mock_clients import MockAutoStreamManagerClient
+from spooler_testing.mock_clients import MockS3SpoolerClient
 
 
 @pytest.fixture
@@ -18,8 +18,8 @@ def spool_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def mock_client() -> MockAutoStreamManagerClient:
-    return MockAutoStreamManagerClient("localhost", 8088, "test-bucket")
+def mock_client() -> MockS3SpoolerClient:
+    return MockS3SpoolerClient("localhost", 8088, "test-bucket")
 
 
 @pytest.fixture
@@ -30,7 +30,7 @@ def config(spool_dir: Path) -> SpoolerConfig:
 @pytest.mark.asyncio
 async def test_drain_existing_files(
     config: SpoolerConfig,
-    mock_client: MockAutoStreamManagerClient,
+    mock_client: MockS3SpoolerClient,
     spool_dir: Path,
 ) -> None:
     """기동 시 이미 존재하는 스풀 파일을 처리한다."""
@@ -65,7 +65,7 @@ async def test_drain_existing_files(
 @pytest.mark.asyncio
 async def test_invalid_filename_skipped(
     config: SpoolerConfig,
-    mock_client: MockAutoStreamManagerClient,
+    mock_client: MockS3SpoolerClient,
     spool_dir: Path,
 ) -> None:
     """스풀 형식이 아닌 파일은 건너뛴다."""
@@ -83,8 +83,8 @@ async def test_invalid_filename_skipped(
 @pytest.mark.greengrass
 async def test_real_stream_manager_connection() -> None:
     """실제 Stream Manager에 연결한다 — Greengrass Core Device 전용."""
-    from spooler.stream_client import AutoStreamManagerClient
+    from spooler.stream_client import S3SpoolerClient
 
-    client = AutoStreamManagerClient("localhost", 8088, "test-bucket")
+    client = S3SpoolerClient("localhost", 8088, "test-bucket")
     client.connect()
     client.close()

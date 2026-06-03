@@ -4,25 +4,25 @@ from pathlib import Path
 
 import pytest
 
-from spooler_testing.mock_clients import MockAutoStreamManagerClient
+from spooler_testing.mock_clients import MockS3SpoolerClient
 
 
 @pytest.fixture
-def pattern2_client() -> MockAutoStreamManagerClient:
+def pattern2_client() -> MockS3SpoolerClient:
     """Pattern 2 전용 클라이언트"""
-    c = MockAutoStreamManagerClient("localhost", 8088, "test-bucket", "status")
+    c = MockS3SpoolerClient("localhost", 8088, "test-bucket", "status")
     c.connect()
     return c
 
 
-class TestAutoStreamManagerClient:
+class TestS3SpoolerClient:
     def test_pattern2_requires_s3_bucket(self) -> None:
         """s3_bucket이 없으면 ValueError 발생"""
         with pytest.raises(ValueError, match="Pattern 2 전용 모드: s3_bucket이 필수입니다"):
-            MockAutoStreamManagerClient("localhost", 8088, "", "")
+            MockS3SpoolerClient("localhost", 8088, "", "")
 
     def test_pattern2_selection_with_s3_bucket(
-        self, tmp_path: Path, pattern2_client: MockAutoStreamManagerClient
+        self, tmp_path: Path, pattern2_client: MockS3SpoolerClient
     ) -> None:
         """s3_bucket이 설정되면 Pattern 2 선택"""
         p = tmp_path / "test.bin"
@@ -42,7 +42,7 @@ class TestAutoStreamManagerClient:
         assert not p.exists()
 
     def test_pattern2_large_file_single_message(
-        self, tmp_path: Path, pattern2_client: MockAutoStreamManagerClient
+        self, tmp_path: Path, pattern2_client: MockS3SpoolerClient
     ) -> None:
         """Pattern 2에서는 파일 크기와 무관하게 단일 메시지"""
         large_data = b"x" * (100 * 1024 * 1024)  # 100MB
@@ -61,7 +61,7 @@ class TestAutoStreamManagerClient:
         assert not p.exists()
 
     def test_pattern2_maintains_s3_key_control(
-        self, tmp_path: Path, pattern2_client: MockAutoStreamManagerClient
+        self, tmp_path: Path, pattern2_client: MockS3SpoolerClient
     ) -> None:
         """Pattern 2에서 s3_key가 정확히 전달되는지 확인"""
         p = tmp_path / "controlled.txt"
@@ -80,7 +80,7 @@ class TestAutoStreamManagerClient:
         assert not p.exists()
 
     def test_pattern_verification(
-        self, pattern2_client: MockAutoStreamManagerClient
+        self, pattern2_client: MockS3SpoolerClient
     ) -> None:
         """선택된 패턴이 Pattern 2인지 확인"""
         assert pattern2_client.get_pattern() == "Pattern 2"

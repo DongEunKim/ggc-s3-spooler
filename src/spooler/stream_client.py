@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 
-class S3ExportStreamManagerClient:
+class S3ExportUploader:
     """
     Pattern 2: S3ExportTaskDefinition 기반 Stream Manager 클라이언트.
 
@@ -162,7 +162,7 @@ class S3ExportStreamManagerClient:
 
 
 
-class AutoStreamManagerClient:
+class S3SpoolerClient:
     """
     Pattern 2 전용 Stream Manager 클라이언트.
 
@@ -184,7 +184,7 @@ class AutoStreamManagerClient:
         self._status_stream_name = status_stream_name
 
         # Pattern 2 전용
-        self._client = S3ExportStreamManagerClient(host, port, s3_bucket, status_stream_name)
+        self._client = S3ExportUploader(host, port, s3_bucket, status_stream_name)
         logger.info("Pattern 2 전용 모드: bucket=%s", s3_bucket)
 
     def connect(self) -> None:
