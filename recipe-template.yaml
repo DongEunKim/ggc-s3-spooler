@@ -19,7 +19,7 @@ ComponentConfiguration:
 
     # 🔧 용량 관리
     max_spool_size_mb: 900
-    file_retention_hours: 24
+    file_retention_hours: 120
     poll_interval_seconds: 5
 
     # 🌐 Stream Manager 연결
@@ -32,7 +32,6 @@ ComponentConfiguration:
 
     # ⚡ 성능 튜닝
     incomplete_file_delay: 1.0
-    default_stream: "telemetry"
 
     # 🔬 안정성 검증 (고급 설정)
     file_stability_wait: 0.1
@@ -73,7 +72,6 @@ Manifests:
             --s3-bucket {configuration:/s3_bucket} \
             --status-stream-name {configuration:/status_stream_name} \
             --incomplete-file-delay {configuration:/incomplete_file_delay} \
-            --default-stream {configuration:/default_stream} \
             --file-stability-wait {configuration:/file_stability_wait} \
             --stability-check-interval {configuration:/stability_check_interval} \
             --stability-check-count {configuration:/stability_check_count} \
